@@ -4,6 +4,7 @@ import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
 public class WebScraper {
+    //    Used to call by Schedule
     public void WebScraperRun() {
         try {
             JobDetail job = JobBuilder.newJob(WebScraperScheduler.class)

@@ -14,4 +14,9 @@ public enum SeasonConstantEnum {
     public String getSeasonConstantCode() {
         return this.code;
     }
+
+    @Override
+    public String toString() {
+        return this.name();
+    }
 }

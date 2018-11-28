@@ -4,47 +4,83 @@ import entites.DailyRanksOrders;
 import entites.ProductsInfo;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import service.DailyRanksOrdersServiceImp;
 import service.ProductsInfoServiceImp;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static util.ProjectUtils.*;
+
 public class ArrayToEntityObjects {
-    private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private DailyRanksOrders dailyRanksOrders = new DailyRanksOrders();
 
-    public void iterateArray(Object[][] data, String tagId, int pageNum) {
+    public void iterateArray(String tagId, String url, int pageNum) {
         JSONArray arrayRankOrder = new JSONArray();
-        String ranks = null;
+        String ranks = "";
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         Boolean arrayListReturn = fetchDailyRanksOrdersDao(tagId, pageNum);
-
+        System.out.println(arrayListReturn);
         if (arrayListReturn) {
             for (Object[] aData : data) {
-                JSONObject obj = new JSONObject();
-                for (int j = 0; j < aData.length; j++) {
-                    if (j == 0)
-                        obj.put("r", aData[j]);  // r - rank
-                    else if (j == 2) {
-                        obj.put("p", aData[j]);  // p - productId
-                        ranks = fetchObjectInProductsInfo(tagId, (Long) aData[j]);
-                    } else if (j == 5)
-                        obj.put("o", aData[j]);  // o - order
+                JSONObject obj = null;
+                boolean insertInOrderRank = true;
+                if (aData[0] != null) {
+                    obj = new JSONObject();
+                    for (int j = 0; j < aData.length; j++) {
+                        if (j == 0)
+                            obj.put("r", aData[j]);  // r - rank
+                        else if (j == 2) {
+                            obj.put("p", aData[j]);  // p - productId
+                            ranks = fetchObjectInProductsInfo(tagId, (Long) aData[j]);
+                        } else if (j == 5) {
+                            obj.put("o", aData[j]);  // o - order
+                            if ((int) aData[j] < minimumOrder) {
+                                accessNextPage = false;
+                            }
+                        }
+                    }
+
+                    try {
+                        Thread.sleep(750);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    if (ranks.equals("")) {
+                        if ((int) aData[5] > minimumOrder) {
+                            insertObjectInProductsInfo(aData, tagId);
+                        } else {
+                            insertInOrderRank = false;
+                            accessNextPage = false;
+                        }
+                    } else {
+                        try {
+                            JSONArray jsonArr = (JSONArray) parser.parse(ranks);
+                            JSONObject jsonObj = (JSONObject) jsonArr.get(jsonArr.size() - 1);
+                            if (!jsonObj.get("d").equals(yearMonthDate)) {
+                                updateObjectInProductsInfo(aData, tagId);
+                            } else {
+                                System.out.println("This Product is Already in Database !!!! YOOOOO");
+                            }
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
-                if (ranks == null) {
-                    insertObjectInProductsInfo(aData, tagId);
-                } else {
-                    updateObjectInProductsInfo(aData, tagId);
-                }
-                arrayRankOrder.add(obj);
+                if (insertInOrderRank)
+                    arrayRankOrder.add(obj);
             }
-            insertObjectInDailyRanksOrders(arrayRankOrder, tagId, pageNum);
+            insertObjectInDailyRanksOrders(arrayRankOrder, tagId, url, pageNum);
         } else System.out.println("Already in the database");
     }
 
     private void updateObjectInProductsInfo(Object[] product, String tagId) {
-        new ProductsInfoServiceImp().updateProductsInfoService(product,tagId);
+        new ProductsInfoServiceImp().updateProductsInfoService(product, tagId);
     }
 
     private void insertObjectInProductsInfo(Object[] product, String tagId) {
@@ -90,10 +126,11 @@ public class ArrayToEntityObjects {
         return new DailyRanksOrdersServiceImp().fetchDailyRanksOrdersDao(tagId, pageNumber);
     }
 
-    private void insertObjectInDailyRanksOrders(JSONArray arrayRankOrder, String tagId, int pageNum) {
-        dailyRanksOrders.setPageNumber(pageNum);
+    private void insertObjectInDailyRanksOrders(JSONArray arrayRankOrder, String tagId, String url, int pageNum) {
         dailyRanksOrders.setTagId(tagId);
+        dailyRanksOrders.setPageURL(url);
         dailyRanksOrders.setDates(dateFormat.format(new Date()));
+        dailyRanksOrders.setPageNumber(pageNum);
         dailyRanksOrders.setRankOrder(arrayRankOrder.toJSONString());
         new DailyRanksOrdersServiceImp().insertDailyRanksOrdersService(dailyRanksOrders);
     }

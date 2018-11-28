@@ -23,6 +23,9 @@ public class DailyRanksOrders implements Serializable {
     @Column(name = "tag")
     private String tagId;
 
+    @Column(name = "pageURL")
+    private String pageURL;
+
     @Column(name = "rank_order")
     private String rankOrder;
 
@@ -40,6 +43,14 @@ public class DailyRanksOrders implements Serializable {
 
     public void setDates(String date) {
         this.dates = date;
+    }
+
+    public String getPageURL() {
+        return pageURL;
+    }
+
+    public void setPageURL(String pageURL) {
+        this.pageURL = pageURL;
     }
 
     public String getTagId() {
@@ -73,6 +84,7 @@ public class DailyRanksOrders implements Serializable {
                 ", pageNumber=" + pageNumber +
                 ", dates='" + dates + '\'' +
                 ", tagId='" + tagId + '\'' +
+                ", pageURL='" + pageURL + '\'' +
                 ", rankOrder='" + rankOrder + '\'' +
                 '}';
     }

@@ -14,102 +14,131 @@ import util.ProjectUtils;
 
 import java.io.IOException;
 
-public class WebScraperScheduler implements Job {
+import static util.ProjectUtils.print;
+import static util.ProjectUtils.data;
 
+public class WebScraperScheduler implements Job {
     private ReadDataFromExcel readDataFromExcel = new ReadDataFromExcel();
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        // Populate Ip Address and Agent 2D array from excel file
         readDataFromExcel.readDataForIpAgent();
+        // Read url from excel file and check it that page is eligible to
+        // execute on certain conditions
         readDataFromExcel.readDataForDatabase();
     }
 
-    public void webScraperAliexpress(String tagId, int pageNum, String url) {
+    public void webScraperAliexpress(String url) {
 
-        Element e1 = ProjectUtils.callJsoup(url).body();
-        Elements element1 = e1.getElementsByClass("picRind ");
-        Elements element2 = e1.getElementsByClass("atc-product-id");
-        Elements productName = e1.getElementsByClass("icon-hotproduct");
-        Elements orderNumbers = e1.getElementsByClass("order-num-a ");
 
-        Object[][] data = new Object[48][6];
+        Document document = ProjectUtils.callJsoup(url);
+        String tagId = ProjectUtils.setTagId(document);
+        int pageNum = ProjectUtils.splitURLForPageNumber(url);
+
+        Elements picture = document.getElementsByClass("picRind ");
+        Elements productId = document.getElementsByClass("atc-product-id");
+
+//        Elements info = document.getElementsByClass("info");
+//        Elements h = info.select("h3");
+//        Elements productName = h.select("a");
+
+        Elements productName = document.getElementsByClass("icon-hotproduct");
+        Elements orderNumbers = document.getElementsByClass("order-num-a ");
+
         int pageNumber = ProjectUtils.splitURLForPageNumber(url);
+
+        data = arraySize(orderNumbers);
+        populateDataArray(picture, productId, productName, orderNumbers, pageNumber);
+//        print(data);
+        new ArrayToEntityObjects().iterateArray(tagId, url, pageNum);
+    }
+
+    private void populateDataArray(Elements picture,
+                                   Elements productId, Elements productName,
+                                   Elements orderNumbers, int pageNumber) {
+
+        int i = 0;
+        for (Element e : orderNumbers) {
+            int x = Integer.parseInt(e.text().substring(e.text().indexOf("(") + 1, e.text().lastIndexOf(")")));
+            if (x < ProjectUtils.minimumOrder) {
+                break;
+            }
+            System.out.println(e.text());
+            i++;
+        }
+        System.out.println(i);
+        data = new Object[i][6];
 
         int rank = (pageNumber - 1) * data.length + 1;
         int index = 0;
 
-        for (Element e : element1) {
-            data[index][0] = rank;
-            data[index][1] = ProjectUtils.splitURLForProduct(e.attr("href"));
-            index++;
-            rank++;
+        for (Element e : picture) {
+            if (index < i) {
+                data[index][0] = rank;
+                data[index][1] = ProjectUtils.splitURLForProduct(e.attr("href"));
+                index++;
+                rank++;
+            } else break;
         }
-
         rank = (pageNumber - 1) * data.length + 1;
         index = 0;
 
-        for (Element e : element2) {
-            data[index][2] = Long.parseLong(e.attr("value"));
-            index++;
-            rank++;
+        for (Element e : productId) {
+            if (index < i) {
+                data[index][2] = Long.parseLong(e.attr("value"));
+                index++;
+                rank++;
+            } else break;
         }
-
         rank = (pageNumber - 1) * data.length + 1;
         index = 0;
 
-        for (Element e : productName.select("a")) {
-            data[index][3] = e.text();
-            index++;
-            rank++;
+        for (Element e : productName) {
+            if (index < i && !e.getElementsByClass("product ").isEmpty()) {
+                data[index][3] = e.text();
+                index++;
+                rank++;
+            } else break;
         }
-
         rank = (pageNumber - 1) * data.length + 1;
         index = 0;
 
-        for (Element e : element1.select("img")) {
-            if (!e.attr("src").equals("")) {
-                data[index][4] = e.attr("src");
-            } else {
-                data[index][4] = e.attr("image-src");
-            }
-            index++;
-            rank++;
+        for (Element e : picture.select("img")) {
+            if (index < i) {
+                if (!e.attr("src").equals("")) {
+                    data[index][4] = e.attr("src");
+                } else {
+                    data[index][4] = e.attr("image-src");
+                }
+                index++;
+                rank++;
+            } else break;
         }
-
         rank = (pageNumber - 1) * data.length + 1;
         index = 0;
 
         for (Element e : orderNumbers) {
-            String value = e.text();
-            data[index][5] = Integer.parseInt(value.substring(value.indexOf("(") + 1, value.lastIndexOf(")")));
-            index++;
-            rank++;
+            if (index < i) {
+                String value = e.text();
+                data[index][5] = Integer.parseInt(value.substring(value.indexOf("(") + 1, value.lastIndexOf(")")));
+                index++;
+                rank++;
+            } else break;
         }
-
-        new ArrayToEntityObjects().iterateArray(data, tagId, pageNum);
     }
 
-
-
-//    public Document callJsoup(String url) {
-//        int randValueForIp = (int) (Math.random() * 1000 - 1);
-//        int randValueForAgent = (int) (Math.random() * 1000 - 1);
-//        System.out.println(ProjectUtils.tempIpAgent[randValueForIp][0] + " " + ProjectUtils.tempIpAgent[randValueForAgent][1]);
-//
-//        System.setProperty("http.proxyHost", ProjectUtils.tempIpAgent[randValueForIp][0]);
-//        System.setProperty("http.proxyPort", String.valueOf((int) (Math.random() * 1000 + 1024)));
-//        Document document = null;
-//        try {
-//            document = Jsoup.connect(ProjectUtils.URLS)
-//                    .userAgent(ProjectUtils.tempIpAgent[randValueForAgent][1])
-//                    .header("Content-Language", "en-US")
-//                    .get();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return document;
-//    }
-
+    private Object[][] arraySize(Elements orderNumbers) {
+        int i = 0;
+        for (Element e : orderNumbers) {
+            int x = Integer.parseInt(e.text().substring(e.text().indexOf("(") + 1, e.text().lastIndexOf(")")));
+            if (x < ProjectUtils.minimumOrder) {
+                break;
+            }
+            i++;
+        }
+        return new Object[i][6];
+    }
 
     private void webScraperAmazon() throws IOException {
         Document document = Jsoup.connect("https://www.amazon.com/Best-Sellers-Electronics/zgbs/electronics/").get();
@@ -143,6 +172,6 @@ public class WebScraperScheduler implements Job {
             }
         }
 
-        ProjectUtils.print(data);
+        print(data);
     }
 }

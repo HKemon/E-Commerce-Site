@@ -6,14 +6,14 @@ import org.hibernate.query.Query;
 import org.json.simple.JSONObject;
 import util.HibernateUtil;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+
+import static util.ProjectUtils.dateFormat;
+import static util.ProjectUtils.year;
+
 
 public class ProductsInfoDaoImp implements ProductsInfoDao {
-    private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    private String year = dateFormat.format(new Date()).split("-")[0];
-
     @Override
     public void insertProductsInfoDao(ProductsInfo productsInfo) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
@@ -36,7 +36,6 @@ public class ProductsInfoDaoImp implements ProductsInfoDao {
 
             String previous = fetchRanksProductsInfoDao(tagId, (Long) product[2]);
             String ranks = concatOperation(previous, obj);
-
 
             String HQL = "update ProductsInfo set ranks_2018 =:ranks where productId=:productId and tagId=:tagId";
 
@@ -62,14 +61,15 @@ public class ProductsInfoDaoImp implements ProductsInfoDao {
     }
 
     private String concatOperation(String prevoius, JSONObject obj) {
-        String pre = prevoius.substring(0, prevoius.lastIndexOf(']'));
+        System.out.println("Prevoius " + prevoius);
+        String pre = prevoius.substring(0, prevoius.lastIndexOf("]"));
         String newVal = "," + obj.toJSONString() + ']';
         return pre + newVal;
     }
 
     @Override
     public String fetchRanksProductsInfoDao(String tagId, long id) {
-        String productsInfo = null;
+        String productsInfo = "";
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             session.beginTransaction();
 
@@ -87,14 +87,15 @@ public class ProductsInfoDaoImp implements ProductsInfoDao {
                     break;
             }
 
-            Object ret = session.createQuery(HQL)
+            List ret = session.createQuery(HQL)
                     .setParameter("productId", id)
                     .setParameter("tagId", tagId)
-                    .uniqueResult();
+                    .getResultList();
 
-            if (ret != null) {
-                productsInfo = ret.toString();
-            }
+            String temp = ret.toString();
+
+            productsInfo = ret.toString().substring(1, temp.length() - 1);
+
             session.getTransaction().commit();
         } catch (Exception e) {
             e.printStackTrace();
