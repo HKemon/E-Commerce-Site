@@ -23,6 +23,7 @@ public class ArrayToEntityObjects {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        
         Boolean arrayListReturn = fetchDailyRanksOrdersDao(tagId, pageNum);
         System.out.println(arrayListReturn);
         if (arrayListReturn) {
