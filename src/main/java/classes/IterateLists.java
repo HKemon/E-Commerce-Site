@@ -39,9 +39,10 @@ public class IterateLists {
                             // Add page number with it also
                             // For fist page pass 1 to getUrlEx method
 
-                            if (!visited.contains(url))                        // -----------------> Have to work on it
-                                unVisited.add("https://" + ProjectUtils.splitURLForPage(link.substring(2)) + ProjectUtils.getUrlEx(1));
-                            else System.out.println("This page is already visited");
+                            if (!visited.contains(url)) {                        // -----------------> Have to work on it
+                                unVisited.add(url);
+                                System.out.println("Un-Visited " + url);
+                            } else System.out.println("This page is already visited");
                         }
                     }
                     break Outer;
@@ -63,13 +64,14 @@ public class IterateLists {
 
     // Access all data for specific URL
     private void callURL() throws IOException {
-        String s = unVisited.poll();  // Take the first url and start operation
+        String s = unVisited.poll();    // Take the first url and start operation
+        visited.add(s);                 // Mark the url as visited.
+        System.out.println("Visited " + s);
         document = Jsoup.connect(s).get();
-        System.out.println(s);
 
         Outer:
         for (Element element1 : document.getElementsByClass("category-list  ")) {
-            for (Element element2 : element1.getElementsByClass("son-category")) {  // Need To Change it DRY Principle
+            for (Element element2 : element1.getElementsByClass("son-category")) {
                 if (element2.select("ul").text().equals("")) {
                     accessNextPage = true;
                     int i = 1;
@@ -81,7 +83,8 @@ public class IterateLists {
                             break Outer;
                         } else {
                             String url = splitURLForPage(s);
-                            ArrayList<ArrayList<String>> seasonGender = seasonGender(document);
+                            ArrayList<ArrayList<String>> seasonGender = null;
+//                            ArrayList<ArrayList<String>> seasonGender = seasonGender(document);
                             // Check if the filter option is null or not???
                             if (seasonGender != null) {
                                 // if there is two filter
@@ -99,21 +102,22 @@ public class IterateLists {
                                 // if there is no filter
                                 int x = orderCountForFirstProductOfPage(callJsoup(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i)));
                                 executeWebScraperAliexpressWithExtension(x, i, url, "");
+                                // increment the page number to execute next page
+                                i++;
+                                System.out.println("Value of i " + i);
                             }
-                            // increment the page number to execute next page
-                            i++;
                         }
                     }
+                    break Outer;
                 }
-                // Find all subcategory of that page
-                categoryList(document);
-                break Outer;
             }
         }
+        // Find all subcategory of that page
+        categoryList(document);
     }
 
     // Return the order of first product of that page
-    private int orderCountForFirstProductOfPage(Document document) {
+    public int orderCountForFirstProductOfPage(Document document) {
         int x = 0;
         for (Element element1 : document.getElementsByClass("order-num-a ")) {
             String value = element1.text();
@@ -125,20 +129,17 @@ public class IterateLists {
 
     // Execute that page if the order of the first product is grater than minimumOrder
     // Otherwise do not need to execute that and next page
-    private void executeWebScraperAliexpressWithExtension(int x, int i, String url, String extension) {
+    public void executeWebScraperAliexpressWithExtension(int x, int i, String url, String extension) {
         if (x > minimumOrder) {
-            System.out.println("ENTERED " + url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension);
             new WebScraperScheduler()
                     .webScraperAliexpress(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension);
         } else {
-            System.out.println("NOT ENTERED " + url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension);
             accessNextPage = false; // To stop executing the next page
         }
     }
 
     // Used to execute for one filter combination
     private void executeForFilterOne(int i, String url, String val, String extension) {
-        System.out.println("test 2 " + val);
         switch (val) {
             case "Winter":
                 extension = "&pvId=" + SeasonConstantEnum.Winter.getSeasonConstantCode();
@@ -204,11 +205,18 @@ public class IterateLists {
 
     // Used to simplify and execute next page
     private void callEnum(int i, String url, String genderConstantEnum, String extension, Enum e) {
-        System.out.println("extension " + ProjectUtils.getUrlEx(i) + extension);
         genderConstantEnum += " ";
-        ProjectUtils.tagId = new StringBuilder("[" + genderConstantEnum + e.name() + "] ");
-        System.out.println(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension);
-        int x = orderCountForFirstProductOfPage(callJsoup(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension));
-        executeWebScraperAliexpressWithExtension(x, i, url, extension);
+        boolean enter = true;
+        while (enter) {
+            int x = orderCountForFirstProductOfPage(callJsoup(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(i) + extension));
+            if (x > minimumOrder) {
+                ProjectUtils.tagId = new StringBuilder("[" + genderConstantEnum + e.name() + "] ");
+                executeWebScraperAliexpressWithExtension(x, i, url, extension);
+                i++;
+            } else {
+                accessNextPage = false;
+                enter = false;
+            }
+        }
     }
 }

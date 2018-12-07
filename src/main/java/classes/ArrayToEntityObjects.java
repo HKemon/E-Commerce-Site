@@ -5,8 +5,10 @@ import entites.ProductsInfo;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.jsoup.nodes.Document;
 import service.DailyRanksOrdersServiceImp;
 import service.ProductsInfoServiceImp;
+import util.ProjectUtils;
 
 import java.util.Date;
 
@@ -23,9 +25,8 @@ public class ArrayToEntityObjects {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        
-        Boolean arrayListReturn = fetchDailyRanksOrdersDao(tagId, pageNum);
-        System.out.println(arrayListReturn);
+        System.out.println(tagId + " " + pageNum);
+        boolean arrayListReturn = fetchDailyRanksOrdersDao(tagId, pageNum);
         if (arrayListReturn) {
             for (Object[] aData : data) {
                 JSONObject obj = null;
@@ -76,8 +77,31 @@ public class ArrayToEntityObjects {
                 if (insertInOrderRank)
                     arrayRankOrder.add(obj);
             }
-            insertObjectInDailyRanksOrders(arrayRankOrder, tagId, url, pageNum);
-        } else System.out.println("Already in the database");
+            if (!arrayRankOrder.isEmpty())
+                insertObjectInDailyRanksOrders(arrayRankOrder, tagId, url, pageNum);
+            else System.out.println("arrayRankOrder is empty");
+        } else if (url.contains("&pvId")) { // 2, 3, 4 etc pages  ............. Filtering
+            while (true) {
+                String[] urls = url.split(".html");
+                pageNum++;
+                String urls2 = urls[1].split("&pvId")[1];
+                boolean arrayListReturnForNextPages = fetchDailyRanksOrdersDao(tagId, pageNum);
+                Document document = callJsoup(url.substring(0, url.length() - 2) + ProjectUtils.getUrlEx(pageNum) + "&pvId" + urls2);
+                int x = new IterateLists().orderCountForFirstProductOfPage(document);
+                if (arrayListReturnForNextPages) {
+                    if (x >= minimumOrder) {
+                        new IterateLists().executeWebScraperAliexpressWithExtension(x, pageNum, urls[0], "&pvId" + urls2);
+                    } else {
+                        accessNextPage = false;
+                        break;
+                    }
+                } else {
+                    accessNextPage = false;
+                    System.out.println("Already in the database");
+                    break;
+                }
+            }
+        }
     }
 
     private void updateObjectInProductsInfo(Object[] product, String tagId) {

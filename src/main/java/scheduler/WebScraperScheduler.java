@@ -30,12 +30,9 @@ public class WebScraperScheduler implements Job {
     }
 
     public void webScraperAliexpress(String url) {
-
-
         Document document = ProjectUtils.callJsoup(url);
         String tagId = ProjectUtils.setTagId(document);
-        int pageNum = ProjectUtils.splitURLForPageNumber(url);
-
+        int pageNumber = ProjectUtils.splitURLForPageNumber(url);
         Elements picture = document.getElementsByClass("picRind ");
         Elements productId = document.getElementsByClass("atc-product-id");
 
@@ -46,12 +43,11 @@ public class WebScraperScheduler implements Job {
         Elements productName = document.getElementsByClass("icon-hotproduct");
         Elements orderNumbers = document.getElementsByClass("order-num-a ");
 
-        int pageNumber = ProjectUtils.splitURLForPageNumber(url);
-
+//        int pageNumber = ProjectUtils.splitURLForPageNumber(url);
         data = arraySize(orderNumbers);
         populateDataArray(picture, productId, productName, orderNumbers, pageNumber);
 //        print(data);
-        new ArrayToEntityObjects().iterateArray(tagId, url, pageNum);
+        new ArrayToEntityObjects().iterateArray(tagId, url, pageNumber);
     }
 
     private void populateDataArray(Elements picture,
@@ -64,10 +60,9 @@ public class WebScraperScheduler implements Job {
             if (x < ProjectUtils.minimumOrder) {
                 break;
             }
-            System.out.println(e.text());
             i++;
         }
-        System.out.println(i);
+        System.out.println("I " + i);
         data = new Object[i][6];
 
         int rank = (pageNumber - 1) * data.length + 1;

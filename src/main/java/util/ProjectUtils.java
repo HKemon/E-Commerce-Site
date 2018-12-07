@@ -22,7 +22,7 @@ public class ProjectUtils {
     public static String year = dateFormat.format(new Date()).split("-")[0];
     public static JSONParser parser = new JSONParser();
     // Set the minimum order to iterate that product
-    public static int minimumOrder = 10;
+    public static int minimumOrder = 300;
     public static String excelFolder = "C:\\Users\\emon\\Desktop\\";
     // Check if the next page is needed to iterate;
     public static boolean accessNextPage = true;

@@ -12,8 +12,8 @@
         <property name="hibernate.hbm2ddl.auto">update</property>
 
         <!--Debug Purpose-->
-        <property name="hibernate.show_sql">true</property>
-        <property name="hibernate.format_sql">true</property>
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">false</property>
 
         <mapping class="entites.DailyRanksOrders"/>
         <mapping class="entites.ProductsInfo"/>
